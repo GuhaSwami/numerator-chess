@@ -37,7 +37,6 @@ MOVE_TABLE = {
 }
 
 # CHATGPT Prompt: In Python, create a dictionary that maps each chess-piece letter to a MoveSpec (I pasted the class here) describing its move vectors and whether the piece moves until blocked. Include entries for pawns, knights, bishops, rooks, queens, and kings.
-
 @dataclass
 class Piece:
     # piece label
@@ -51,18 +50,21 @@ class Piece:
 # ──────────────────────── board engine ────────────────────────
 class Board:
 
-    def __init__(self) -> None:
+    def __init__(self) -> None: # initialize board: create 8x8 grid then populate with pieces
         # 2-D grid: g[file][rank]
         self.g: List[List[Optional[Piece]]] = [[None] * 8 for _ in range(8)]
         self.turn: Color = Color.WHITE
 
-        # Initial layout
-        order = "RNBQKBNR"
-        for f, k in enumerate(order):
-            self.g[f][0] = Piece(k, Color.WHITE)
-            self.g[f][7] = Piece(k, Color.BLACK)
-            self.g[f][1] = Piece("P", Color.WHITE)
-            self.g[f][6] = Piece("P", Color.BLACK)
+        initial_positions = {
+            0: ("RNBQKBNR", Color.WHITE),
+            1: ("PPPPPPPP", Color.WHITE),
+            6: ("PPPPPPPP", Color.BLACK),
+            7: ("RNBQKBNR", Color.BLACK),
+        }
+
+        for rank, (row, color) in initial_positions.items():
+            for file, kind in enumerate(row):
+                self.g[file][rank] = Piece(kind, color)
 
     # ───────────── public API ─────────────
     def move(self, uci: str) -> None:
@@ -79,21 +81,21 @@ class Board:
         # --- if an enemy peice is in that spot, it is deleted from the grid ---------------------------------------------------
         self._set(dst, piece)
         self._set(src, None)
-        self.turn = self.turn.other()
+        self.turn = self.turn.other() # toggles color
 
     # ───────────── move generation ─────────────
     def _legal_from(self, sq: Square) -> List[Square]:
+
         """Return pseudo-legal target squares for the piece on *sq*."""
         p = self._at(sq)
         if not p:
             return []
 
         # Pawn rules diverge, everything else table-driven
-        return (
-            self._pawn_moves(sq, p.color)
-            if p.kind == "P"
-            else self._ray_moves(sq, MOVE_TABLE[p.kind])
-        )
+        if p.kind == "P":
+            return self._pawn_moves(sq, p.color)
+        else:
+            return self._ray_moves(sq, MOVE_TABLE[p.kind])
 
     def _ray_moves(self, sq: Square, spec: _MoveSpec) -> List[Square]:
         """
