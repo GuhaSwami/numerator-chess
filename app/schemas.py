@@ -1,21 +1,7 @@
 from pydantic import BaseModel, Field
-from typing import List, Tuple
 
-Square = Tuple[int, int]
+PATTERN = r"^[a-h][1-8]$"           # algebraic square, e.g. a2, h7
 
-
-class CreateGameResponse(BaseModel):
-    game_id: str
-    board: str
-
-
-class MoveRequest(BaseModel):
-    src: Square = Field(..., example=[0, 1])
-    dst: Square = Field(..., example=[0, 3])
-
-
-class MoveResponse(BaseModel):
-    ok: bool
-    board: str
-    turn: str
-    history: List[str]
+class MoveAlgebraic(BaseModel):
+    src: str = Field(..., pattern=PATTERN)
+    dst: str = Field(..., pattern=PATTERN)

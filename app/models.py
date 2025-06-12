@@ -24,7 +24,7 @@ class PieceType(str, Enum):
     QUEEN = "queen"
     KING = "king"
 
-
+# list out labels for pieces, count for upper and lower case
 @dataclass
 class Piece:
     color: Color

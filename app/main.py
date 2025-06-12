@@ -1,27 +1,28 @@
 from fastapi import FastAPI, HTTPException
-from .storage import new_game, get_game
-from .schemas import CreateGameResponse, MoveRequest, MoveResponse
+from app.schemas import MoveAlgebraic
+from app.storage import new_game, get_game   # ← the real helpers
 
-app = FastAPI(title="Chess Game Service")
+app = FastAPI(title="Numerator Chess")
 
-
-@app.post("/game", response_model=CreateGameResponse)
+# ───────────────────────── create game ─────────────────────────
+@app.post("/game")
 def create_game():
-    g = new_game()
-    return {"game_id": g.id, "board": g.board.ascii()}
+    game = new_game()                 # returns Game instance + stores it
+    return {"id": game.id, "board": str(game.board)}
 
-
-@app.post("/game/{gid}/move", response_model=MoveResponse)
-def make_move(gid: str, req: MoveRequest):
-    g = get_game(gid)
-    if not g:
+# ───────────────────────── make a move ─────────────────────────
+@app.post("/game/{gid}/move")
+def play_move(gid: str, move: MoveAlgebraic):
+    try:
+        game = get_game(gid)          # raises KeyError if unknown id
+    except KeyError:
         raise HTTPException(status_code=404, detail="game not found")
-    ok = g.move(tuple(req.src), tuple(req.dst))
-    if not ok:
-        raise HTTPException(status_code=400, detail="illegal move")
-    return {
-        "ok": True,
-        "board": g.board.ascii(),
-        "turn": g.turn.value,
-        "history": g.history,
-    }
+
+    try:
+        game.board.move(move.src + move.dst)   # "a2a3", "e7e5", …
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+    return {"board": str(game.board)}
+
+# URL to access swagger UI: http://127.0.0.1:8000/docs
